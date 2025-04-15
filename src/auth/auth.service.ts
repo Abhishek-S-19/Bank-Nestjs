@@ -1,3 +1,4 @@
+// src/auth/auth.service.ts
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
@@ -5,11 +6,14 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
-  constructor(private usersService: UsersService, private jwtService: JwtService) {}
+  constructor(
+    private usersService: UsersService,
+    private jwtService: JwtService,
+  ) {}
 
   async validateUser(username: string, password: string): Promise<any> {
     const user = await this.usersService.findByUsername(username);
-    if (!user || user.isLocked) return null;
+    if (!user || user.isLocked) return null;  
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
@@ -26,12 +30,28 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { username: user.username, sub: user.id };
-    return { access_token: this.jwtService.sign(payload) };
+    const payload = {
+      username: user.username,
+      sub: user.id,
+      role: user.role, // ✅ Include the role in the token
+    };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
   }
 
   async register(userDto: any) {
     const hashedPassword = await bcrypt.hash(userDto.password, 10);
-    return this.usersService.create({ ...userDto, password: hashedPassword });
+
+    // Default to 'user' role if not provided
+    const role = userDto.role ?? 'user';
+
+    return this.usersService.create({
+      ...userDto,
+      password: hashedPassword,
+      role,
+      isLocked: false,
+      loginAttempts: 0,
+    });
   }
 }

@@ -20,4 +20,7 @@ export class User {
 
   @Column()
   isLocked: boolean;
+
+  @Column()
+  role: 'admin' | 'user';
 }
